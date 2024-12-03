@@ -12,12 +12,15 @@ class Task {
       required this.dueDate,
       this.isCompleted = false});
 
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'dueDate': dueDate,
-      'isCompleted': isCompleted,
-    };
+  ParseObject toParse() {
+    final parseObject = ParseObject('Task')
+      ..set('title', title)
+      ..set('dueDate', dueDate)
+      ..set('isCompleted', isCompleted);
+    if (id != null) {
+      parseObject.objectId = id;
+    }
+    return parseObject;
   }
 
   Task.fromParse(ParseObject object)
@@ -26,29 +29,23 @@ class Task {
         dueDate = object.get<DateTime>('dueDate') ?? DateTime.now(),
         isCompleted = object.get<bool>('isCompleted') ?? false;
 
-  ParseObject toParse() {
-    final parseObject = ParseObject('Task')
-      ..set('title', title)
-      ..set('dueDate', dueDate);
-    return parseObject;
-  }
-
   Future<void> save() async {
-    final parseObject = ParseObject('Task')
-      ..set('title', title)
-      ..set('dueDate', dueDate)
-      ..set('isCompleted', isCompleted);
-
-    if (id == null) {
-      await parseObject.save();
+    final currentUser = await ParseUser.currentUser() as ParseUser?;
+    if (currentUser != null) {
+      final parseObject = toParse()..set('user', currentUser.toPointer());
+      final response = await parseObject.save();
+      if (!response.success) {
+        throw Exception('Failed to save task: ${response.error?.message}');
+      }
     } else {
-      parseObject.objectId = id;
-      await parseObject.save();
+      throw Exception('No user logged in.');
     }
   }
 
   Future<void> delete() async {
-    final parseObject = ParseObject('Task')..objectId = id;
-    await parseObject.delete();
+    final response = await toParse().delete();
+    if (!response.success) {
+      throw Exception('Failed to delete task: ${response.error?.message}');
+    }
   }
 }

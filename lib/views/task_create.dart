@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:quicktask/models/task.dart';
+import 'package:intl/intl.dart';
+import '../models/task.dart';
+import '../services/task_service.dart';
 
 class AddTaskPage extends StatefulWidget {
   @override
@@ -8,58 +10,57 @@ class AddTaskPage extends StatefulWidget {
 
 class _AddTaskPageState extends State<AddTaskPage> {
   final _titleController = TextEditingController();
-  DateTime? _selectedDate;
   final _formKey = GlobalKey<FormState>();
+  DateTime? _selectedDate;
 
-  // Handle task saving to the database
   Future<void> _saveTask() async {
     if (_formKey.currentState?.validate() ?? false) {
-      final title = _titleController.text;
-      if (_selectedDate != null) {
-        final task = Task(title: title, dueDate: _selectedDate!);
-        final parseObject = task.toParse();
+      if (_selectedDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please select a due date')),
+        );
+        return;
+      }
 
-        final response = await parseObject.save();
+      final task = Task(title: _titleController.text, dueDate: _selectedDate!);
 
-        if (response.success) {
-          // Successfully saved task, show success message and pop page
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Task added successfully')));
-          Navigator.pop(context); // Go back to the previous screen (task list)
-        } else {
-          // Show error message if saving fails
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Failed to add task')));
-        }
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Please select a due date')));
+      try {
+        await TaskService().createTask(task);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Task added successfully')),
+        );
+        Navigator.pop(context);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add task: $e')),
+        );
       }
     }
   }
 
-  // Open the date picker to select due date
-  Future<void> _selectDueDate(BuildContext context) async {
-    final DateTime? pickedDate = await showDatePicker(
+  Future<void> _selectDueDate() async {
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
-      lastDate: DateTime(2050),
+      lastDate: DateTime(2100),
     );
 
-    if (pickedDate != null && pickedDate != _selectedDate) {
+    if (pickedDate != null) {
       setState(() {
         _selectedDate = pickedDate;
       });
     }
   }
 
+  String formatDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date); // Example format: 2024-12-03
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Add New Task'),
-      ),
+      appBar: AppBar(title: Text('Add New Task')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -67,7 +68,6 @@ class _AddTaskPageState extends State<AddTaskPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Task Title Input
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(labelText: 'Task Title'),
@@ -79,20 +79,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
                 },
               ),
               SizedBox(height: 16),
-
-              // Due Date Picker
               TextButton(
-                onPressed: () => _selectDueDate(context),
+                onPressed: _selectDueDate,
                 child: Text(
                   _selectedDate == null
                       ? 'Select Due Date'
-                      : 'Due Date: ${_selectedDate!.toLocal()}'
-                          .split(' ')[0], // Formatting date
+                      : 'Due Date: ${formatDate(_selectedDate!)}',
                 ),
               ),
               SizedBox(height: 16),
-
-              // Save Button
               ElevatedButton(
                 onPressed: _saveTask,
                 child: Text('Save Task'),

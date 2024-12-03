@@ -193,7 +193,7 @@ packages:
     source: hosted
     version: "4.0.2"
   idb_shim:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: idb_shim
       sha256: "9e7ec816139bfafb69ae4b3668ad29dbd43c53428d6eb31f9332d42bd4fa7205"
@@ -401,7 +401,7 @@ packages:
     source: hosted
     version: "2.1.8"
   sembast:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: sembast
       sha256: b20afd98c44bfc272d57a82cb191fbb728875c95e06c973149666f27d81d6afd

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
-import 'task_list.dart';
-import 'package:quicktask/services/auth_service.dart';
+import './task_list.dart';
+import '../services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -14,33 +14,69 @@ class _AuthScreenState extends State<AuthScreen> {
   final _authService = AuthService();
   final _errorText = ValueNotifier<String>("");
 
-  Future<void> handleAuth() async {
+  bool _isLoading = false;
+
+  // Validate email and password
+  bool _validateInputs() {
     final email = _emailController.text;
     final password = _passwordController.text;
 
-    // Try logging in first
-    final loginError = await _authService.login(email, password);
+    if (email.isEmpty || !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      _errorText.value = 'Please enter a valid email address.';
+      return false;
+    }
 
-    if (loginError == null) {
-      // If login is successful, navigate to the Task List screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => TaskListScreen()),
-      );
-    } else {
-      // If login failed (likely because user does not exist), try signing up
+    if (password.isEmpty || password.length < 6) {
+      _errorText.value = 'Password must be at least 6 characters long.';
+      return false;
+    }
+
+    _errorText.value = ''; // Clear error text if inputs are valid
+    return true;
+  }
+
+  // Handle Authentication (Login / Sign Up)
+  Future<void> _handleAuth() async {
+    if (!_validateInputs()) return;
+
+    setState(() {
+      _isLoading = true; // Show loading indicator
+    });
+
+    final email = _emailController.text;
+    final password = _passwordController.text;
+
+    try {
+      // Try logging in first
+      final loginError = await _authService.login(email, password);
+
+      if (loginError == null) {
+        // Navigate to Task List screen if login succeeds
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => TaskListScreen()),
+        );
+        return;
+      }
+
+      // If login fails, try signing up
       final signUpError = await _authService.signUp(email, password);
 
       if (signUpError == null) {
-        // If sign-up is successful, navigate to the Task List screen
+        // Navigate to Task List screen if sign-up succeeds
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => TaskListScreen()),
         );
       } else {
-        // If both login and sign-up fail, show the error
-        _errorText.value = signUpError;
+        _errorText.value = signUpError; // Show sign-up error
       }
+    } catch (e) {
+      _errorText.value = 'An unexpected error occurred: $e';
+    } finally {
+      setState(() {
+        _isLoading = false; // Hide loading indicator
+      });
     }
   }
 
@@ -51,27 +87,42 @@ class _AuthScreenState extends State<AuthScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Email Input
             TextField(
               controller: _emailController,
               decoration: InputDecoration(labelText: "Email"),
+              keyboardType: TextInputType.emailAddress,
             ),
+            SizedBox(height: 16),
+
+            // Password Input
             TextField(
               controller: _passwordController,
               decoration: InputDecoration(labelText: "Password"),
               obscureText: true,
             ),
+            SizedBox(height: 16),
+
+            // Error Message
             ValueListenableBuilder<String>(
               valueListenable: _errorText,
               builder: (context, error, child) {
-                return Text(error, style: TextStyle(color: Colors.red));
+                return error.isEmpty
+                    ? SizedBox.shrink()
+                    : Text(error, style: TextStyle(color: Colors.red));
               },
             ),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: handleAuth, // Trigger login or sign-up
-              child: Text("Login / Sign Up"),
-            ),
+
+            // Authentication Button
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : ElevatedButton(
+                    onPressed: _handleAuth,
+                    child: Text("Login / Sign Up"),
+                  ),
           ],
         ),
       ),
