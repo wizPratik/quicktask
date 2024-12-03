@@ -86,9 +86,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         _tasks = tasks;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch tasks: $e')),
-      );
+      print("Failed to fetch tasks");
     } finally {
       setState(() {
         _isLoading = false;
