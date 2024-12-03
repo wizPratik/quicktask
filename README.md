@@ -25,3 +25,9 @@ const String appId = "BACK4APP_APPLICATION_ID";
 const String clientKey = "BACK4APP_CLIENT_KEY";
 const String serverUrl = "https://parseapi.back4app.com/";
 ```
+
+3. Execute the following command
+
+```sh
+flutter run
+```
